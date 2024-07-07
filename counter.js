@@ -1,28 +1,4 @@
-/* Original Version
-import { CustomElement, reactive, defineCustomElement } from './custom-element-framework.js';
-
-
-class Counter extends CustomElement {
-    constructor() {
-        super();
-        reactive(this, 'count');
-        this.count = 0;
-    }
-
-    increment() {
-        this.count++;
-    }
-
-    decrement() {
-        this.count--;
-    }
-}
-
-defineCustomElement('custom-counter', Counter);
- */
-
 // counter.js
-
 import { CustomElement, defineCustomElement } from './custom-element-framework.js';
 
 class Counter extends CustomElement {
