@@ -15,6 +15,9 @@ class CustomElement extends HTMLElement {
         // Initialize a map to store bindings between state properties and DOM elements
         this._bindings = new Map();
 
+        // Initialize a list to store added event listeners for cleanup
+        this._eventListeners = [];
+
         // Create a proxy for the component's state to track changes and update bindings automatically
         this._state = {};
         this.state = new Proxy(this._state, {
@@ -52,11 +55,12 @@ class CustomElement extends HTMLElement {
 
     /**
      * Called when the element is removed from the document's DOM.
-     * Calls componentWillUnmount if defined.
+     * Calls componentWillUnmount if defined and cleans up event listeners and other resources.
      */
     disconnectedCallback() {
         try {
             this.componentWillUnmount && this.componentWillUnmount(); // Call componentWillUnmount if defined
+            this.cleanupEventListeners(); // Clean up all event listeners
         } catch (error) {
             console.error('Error during component unmounting', error);
         }
@@ -103,7 +107,7 @@ class CustomElement extends HTMLElement {
     }
 
     /**
-     * Bind event listeners to elements with the 'on' attribute.
+     * Bind event listeners to elements with the 'on' attribute and store them for cleanup.
      */
     bindEvents() {
         this._shadowRoot.querySelectorAll('[on]').forEach(element => {
@@ -112,7 +116,9 @@ class CustomElement extends HTMLElement {
             if (matches) {
                 const [, eventName, methodName] = matches;
                 if (typeof this[methodName] === 'function') {
-                    element.addEventListener(eventName, this[methodName].bind(this)); // Bind the event listener
+                    const boundMethod = this[methodName].bind(this);
+                    element.addEventListener(eventName, boundMethod); // Bind the event listener
+                    this._eventListeners.push({ element, eventName, boundMethod }); // Store the event listener for cleanup
                 } else {
                     console.warn(`Method "${methodName}" not defined`);
                 }
@@ -270,6 +276,16 @@ class CustomElement extends HTMLElement {
         for (const [key, value] of Object.entries(theme)) {
             this.style.setProperty(`--${key}`, value);
         }
+    }
+
+    /**
+     * Clean up all event listeners added by the component.
+     */
+    cleanupEventListeners() {
+        this._eventListeners.forEach(({ element, eventName, boundMethod }) => {
+            element.removeEventListener(eventName, boundMethod);
+        });
+        this._eventListeners = []; // Clear the event listeners list
     }
 }
 
