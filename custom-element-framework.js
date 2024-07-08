@@ -1,5 +1,3 @@
-// custom-element-framework.js
-
 /**
  * CustomElement is a base class for creating custom HTML elements with shadow DOM, state management,
  * and data binding capabilities.
@@ -231,8 +229,9 @@ class CustomElement extends HTMLElement {
     /**
      * Set the state properties and trigger bindings update.
      * @param {object} newState - The new state to be merged with the existing state.
+     * @returns {Promise<void>} - A promise that resolves when the state is updated and bindings are refreshed.
      */
-    setState(newState) {
+    async setState(newState) {
         Object.keys(newState).forEach(key => {
             if (typeof this._state[key] !== 'function') {
                 this.state[key] = newState[key];
