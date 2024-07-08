@@ -1,0 +1,24 @@
+<!-- /templates/nestedcomponent.html -->
+<template>
+    <style>
+        :host {
+            display: block;
+            padding: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            text-align: center;
+        }
+        input {
+            padding: 8px;
+            margin: 4px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+    <h2>Nested Component</h2>
+    <p>{{message}}</p>
+    <input type="text" on="input:{{updateMessage}}" bind="{{message}}">
+    <custom-counter></custom-counter>
+</template>

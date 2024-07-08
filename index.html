@@ -8,14 +8,10 @@
     <title>Custom Element Framework Demo</title>
 </head>
 <body>
-<custom-counter></custom-counter>
-<my-component>
-    <div slot="additional-content">
-        <p>This is additional content inside the slot.</p>
-    </div>
-</my-component>
+<nested-component></nested-component>
 
 <script type="module" src="counter.js"></script>
-<script type="module" src="./MyComponent.js"></script>
+<script type="module" src="MyComponent.js"></script>
+<script type="module" src="NestedComponent.js"></script>
 </body>
 </html>

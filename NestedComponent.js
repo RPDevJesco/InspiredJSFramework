@@ -1,10 +1,11 @@
 import { CustomElement, defineCustomElement } from './custom-element-framework.js';
+import './counter.js'; // Import the Counter component
 
-class Counter extends CustomElement {
+class NestedComponent extends CustomElement {
     constructor() {
         super();
         this.state = new Proxy({
-            count: 0,
+            message: 'Hello from Nested Component!',
         }, {
             set: (target, property, value) => {
                 target[property] = value;
@@ -20,21 +21,17 @@ class Counter extends CustomElement {
     }
 
     componentDidMount() {
-        console.log('Counter component mounted.');
+        console.log('NestedComponent mounted.');
     }
 
     componentWillUnmount() {
-        console.log('Counter component will be unmounted.');
+        console.log('NestedComponent will be unmounted.');
     }
 
-    increment() {
-        this.setState({ count: this.state.count + 1 });
-    }
-
-    decrement() {
-        this.setState({ count: this.state.count - 1 });
+    updateMessage(event) {
+        this.setState({ message: event.target.value });
     }
 }
 
 // Define the custom element
-defineCustomElement('custom-counter', Counter);
+defineCustomElement('nested-component', NestedComponent);

@@ -30,7 +30,7 @@ class CustomElement extends HTMLElement {
     // Called when the element is added to the document's DOM
     async connectedCallback() {
         this.template = await this.loadTemplate(); // Load the template asynchronously
-        this.render(); // Render the component
+        await this.render(); // Render the component
         this.componentDidMount && this.componentDidMount(); // Call componentDidMount if defined
     }
 
@@ -63,19 +63,29 @@ class CustomElement extends HTMLElement {
         });
     }
 
-    // Update the text content of elements bound to state properties
+    // Update the text content and value of elements bound to state properties
     updateBindings() {
-        this._bindings.forEach((element, key) => {
-            element.textContent = this.state[key];
+        this._bindings.forEach((binding, key) => {
+            binding.elements.forEach(element => {
+                if (element.type === 'checkbox') {
+                    element.checked = this.state[key];
+                } else if (element.type === 'radio') {
+                    element.checked = (element.value === this.state[key]);
+                } else if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.tagName === 'SELECT') {
+                    element.value = this.state[key];
+                } else {
+                    element.textContent = this.state[key];
+                }
+            });
         });
     }
 
     // Render the component by attaching the template content to the shadow DOM
-    render() {
+    async render() {
         if (this.template) {
             this._shadowRoot.innerHTML = ''; // Clear the shadow DOM
             const content = this.template.content.cloneNode(true); // Clone the template content
-            this.processBindings(content); // Process data bindings in the template
+            await this.processBindings(content); // Process data bindings in the template
             this._shadowRoot.appendChild(content); // Append the template content to the shadow DOM
             this.bindEvents(); // Bind events to the elements
             this.updateBindings(); // Update bindings with the current state
@@ -84,13 +94,30 @@ class CustomElement extends HTMLElement {
     }
 
     // Process data bindings in the template content
-    processBindings(content) {
-        content.querySelectorAll('*').forEach(element => {
+    async processBindings(content) {
+        const elements = content.querySelectorAll('*');
+        for (const element of elements) {
             Array.from(element.attributes).forEach(attr => {
                 if (attr.value.match(/{{.*}}/)) { // Check if the attribute value contains a binding
                     const key = attr.value.match(/{{(.*)}}/)[1];
                     if (attr.name === 'bind') {
-                        this._bindings.set(key, element); // Bind the element to the state property
+                        if (!this._bindings.has(key)) {
+                            this._bindings.set(key, { elements: [], eventListeners: [] });
+                        }
+                        this._bindings.get(key).elements.push(element); // Bind the element to the state property
+
+                        // Listen for input events to update the state
+                        const updateState = (event) => {
+                            if (element.type === 'checkbox') {
+                                this.state[key] = element.checked;
+                            } else if (element.type === 'radio' && element.checked) {
+                                this.state[key] = element.value;
+                            } else {
+                                this.state[key] = element.value;
+                            }
+                        };
+                        element.addEventListener('input', updateState);
+                        this._bindings.get(key).eventListeners.push(updateState);
                     } else {
                         const originalValue = attr.value;
                         Object.defineProperty(element, attr.name, {
@@ -108,10 +135,19 @@ class CustomElement extends HTMLElement {
                 const match = text.match(/{{(.*)}}/);
                 if (match) {
                     const key = match[1];
-                    this._bindings.set(key, element); // Bind the element to the state property
+                    if (!this._bindings.has(key)) {
+                        this._bindings.set(key, { elements: [], eventListeners: [] });
+                    }
+                    this._bindings.get(key).elements.push(element); // Bind the element to the state property
                 }
             }
-        });
+
+            // Wait for nested components to be defined and initialized
+            if (customElements.get(element.localName)) {
+                await customElements.whenDefined(element.localName);
+                element.connectedCallback && element.connectedCallback();
+            }
+        }
     }
 
     // Render the slot content by appending assigned nodes to their respective slots
