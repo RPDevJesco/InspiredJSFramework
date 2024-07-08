@@ -1,6 +1,9 @@
 // custom-element-framework.js
 
-// Define a base class for custom elements, extending from HTMLElement
+/**
+ * CustomElement is a base class for creating custom HTML elements with shadow DOM, state management,
+ * and data binding capabilities.
+ */
 class CustomElement extends HTMLElement {
     constructor() {
         super(); // Call the parent class's constructor
@@ -12,8 +15,13 @@ class CustomElement extends HTMLElement {
         this._bindings = new Map();
 
         // Create a proxy for the component's state to track changes and update bindings automatically
-        this.state = new Proxy({}, {
+        this._state = {};
+        this.state = new Proxy(this._state, {
             set: (target, property, value) => {
+                if (typeof target[property] === 'function') {
+                    console.warn(`Cannot set computed property "${property}"`);
+                    return false;
+                }
                 target[property] = value; // Set the property value
                 this.updateBindings(); // Update the bindings whenever the state changes
                 return true;
@@ -27,19 +35,47 @@ class CustomElement extends HTMLElement {
         }
     }
 
-    // Called when the element is added to the document's DOM
+    /**
+     * Called when the element is added to the document's DOM.
+     * Loads the template, renders the component, and calls componentDidMount if defined.
+     */
     async connectedCallback() {
         this.template = await this.loadTemplate(); // Load the template asynchronously
         await this.render(); // Render the component
         this.componentDidMount && this.componentDidMount(); // Call componentDidMount if defined
     }
 
-    // Called when the element is removed from the document's DOM
+    /**
+     * Called when the element is removed from the document's DOM.
+     * Calls componentWillUnmount if defined.
+     */
     disconnectedCallback() {
         this.componentWillUnmount && this.componentWillUnmount(); // Call componentWillUnmount if defined
     }
 
-    // Load the HTML template from the specified URL
+    /**
+     * Observe attributes for changes and sync them to state.
+     */
+    static get observedAttributes() {
+        return this.attributesList || [];
+    }
+
+    /**
+     * Called when an observed attribute changes. Syncs the attribute to the state.
+     * @param {string} name - The name of the attribute.
+     * @param {any} oldValue - The old value of the attribute.
+     * @param {any} newValue - The new value of the attribute.
+     */
+    attributeChangedCallback(name, oldValue, newValue) {
+        if (this._state[name] !== undefined) {
+            this._state[name] = newValue;
+        }
+    }
+
+    /**
+     * Load the HTML template from the specified URL.
+     * @returns {Promise<HTMLElement>} - The loaded template.
+     */
     async loadTemplate() {
         const templateUrl = this.constructor.templateUrl;
         if (!templateUrl) return null; // Return null if no template URL is set
@@ -51,7 +87,9 @@ class CustomElement extends HTMLElement {
         return doc.querySelector('template'); // Return the <template> element
     }
 
-    // Bind event listeners to elements with the 'on' attribute
+    /**
+     * Bind event listeners to elements with the 'on' attribute.
+     */
     bindEvents() {
         this._shadowRoot.querySelectorAll('[on]').forEach(element => {
             const eventBinding = element.getAttribute('on'); // Get the event binding string
@@ -63,7 +101,9 @@ class CustomElement extends HTMLElement {
         });
     }
 
-    // Update the text content and value of elements bound to state properties
+    /**
+     * Update the text content and value of elements bound to state properties.
+     */
     updateBindings() {
         this._bindings.forEach((binding, key) => {
             binding.elements.forEach(element => {
@@ -80,7 +120,9 @@ class CustomElement extends HTMLElement {
         });
     }
 
-    // Render the component by attaching the template content to the shadow DOM
+    /**
+     * Render the component by attaching the template content to the shadow DOM.
+     */
     async render() {
         if (this.template) {
             this._shadowRoot.innerHTML = ''; // Clear the shadow DOM
@@ -93,7 +135,10 @@ class CustomElement extends HTMLElement {
         }
     }
 
-    // Process data bindings in the template content
+    /**
+     * Process data bindings in the template content.
+     * @param {HTMLElement} content - The template content.
+     */
     async processBindings(content) {
         const elements = content.querySelectorAll('*');
         for (const element of elements) {
@@ -150,23 +195,69 @@ class CustomElement extends HTMLElement {
         }
     }
 
-    // Render the slot content by appending assigned nodes to their respective slots
+    /**
+     * Render the slot content by appending assigned nodes to their respective slots.
+     */
     renderSlots() {
         const slotElements = this._shadowRoot.querySelectorAll('slot');
         slotElements.forEach(slot => {
             const name = slot.getAttribute('name');
             const assignedNodes = this.querySelectorAll(`[slot="${name}"]`);
-            assignedNodes.forEach(node => slot.appendChild(node)); // Append assigned nodes to the slot
+            assignedNodes.forEach(node => slot.appendChild(node.cloneNode(true))); // Append assigned nodes to the slot
         });
     }
 
-    // Set the state properties and trigger bindings update
+    /**
+     * Set the state properties and trigger bindings update.
+     * @param {object} newState - The new state to be merged with the existing state.
+     */
     setState(newState) {
-        Object.assign(this.state, newState); // Merge new state with the existing state
+        Object.keys(newState).forEach(key => {
+            if (typeof this._state[key] !== 'function') {
+                this.state[key] = newState[key];
+            }
+        });
+        this.updateBindings();
+    }
+
+    /**
+     * Define a computed property that automatically recalculates based on state changes.
+     * @param {string} name - The name of the computed property.
+     * @param {function} computeFn - The function to compute the property's value.
+     */
+    defineComputedProperty(name, computeFn) {
+        Object.defineProperty(this.state, name, {
+            get: computeFn,
+            enumerable: true,
+            configurable: true
+        });
+    }
+
+    /**
+     * Dispatch a custom event from the element.
+     * @param {string} eventName - The name of the event.
+     * @param {object} detail - The detail object to be attached to the event.
+     */
+    dispatchCustomEvent(eventName, detail) {
+        this.dispatchEvent(new CustomEvent(eventName, { detail }));
+    }
+
+    /**
+     * Apply a theme to the element using CSS variables.
+     * @param {object} theme - The theme object containing CSS variable values.
+     */
+    applyTheme(theme) {
+        for (const [key, value] of Object.entries(theme)) {
+            this.style.setProperty(`--${key}`, value);
+        }
     }
 }
 
-// Define a custom element with the specified name and class
+/**
+ * Define a custom element with the specified name and class.
+ * @param {string} name - The name of the custom element.
+ * @param {class} elementClass - The class representing the custom element.
+ */
 function defineCustomElement(name, elementClass) {
     customElements.define(name, elementClass); // Register the custom element with the browser
 }

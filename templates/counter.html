@@ -6,7 +6,8 @@
             padding: 16px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            background-color: #f9f9f9;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             text-align: center;
         }
         button {
@@ -26,12 +27,16 @@
         .count {
             font-size: 24px;
             font-weight: bold;
-            color: #333;
         }
     </style>
-    <h2>Counter</h2>
+    <h2>Enhanced Counter</h2>
     <p>Current count: <span class="count" bind="{{count}}"></span></p>
+    <p>Double count: <span class="count">{{doubleCount}}</span></p>
     <button on="click:{{decrement}}">-</button>
     <button on="click:{{increment}}">+</button>
+    <select name="theme" bind="{{theme}}">
+        <option value="light">Light Theme</option>
+        <option value="dark">Dark Theme</option>
+    </select>
     <slot name="description"></slot>
 </template>
