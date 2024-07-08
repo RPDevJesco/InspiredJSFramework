@@ -5,14 +5,10 @@ class Counter extends CustomElement {
         super();
         this.state = new Proxy({
             count: 0,
-            theme: 'light',
         }, {
             set: (target, property, value) => {
                 target[property] = value;
                 this.updateBindings();
-                if (property === 'theme') {
-                    this.applyTheme(this.themes[value]);
-                }
                 return true;
             }
         });
@@ -21,7 +17,7 @@ class Counter extends CustomElement {
     }
 
     static get attributesList() {
-        return ['count', 'theme'];
+        return ['count'];
     }
 
     connectedCallback() {
@@ -50,17 +46,6 @@ class Counter extends CustomElement {
         this.setState({ count: this.state.count - 1 });
         this.dispatchCustomEvent('countChanged', { count: this.state.count });
     }
-
-    themes = {
-        light: {
-            'bg-color': '#f9f9f9',
-            'text-color': '#333'
-        },
-        dark: {
-            'bg-color': '#333',
-            'text-color': '#f9f9f9'
-        }
-    };
 }
 
 // Define the custom element

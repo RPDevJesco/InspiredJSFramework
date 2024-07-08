@@ -5,6 +5,9 @@
  * and data binding capabilities.
  */
 class CustomElement extends HTMLElement {
+    /**
+     * Initializes the custom element, sets up shadow DOM, state management, and data bindings.
+     */
     constructor() {
         super(); // Call the parent class's constructor
 
@@ -19,11 +22,11 @@ class CustomElement extends HTMLElement {
         this.state = new Proxy(this._state, {
             set: (target, property, value) => {
                 if (typeof target[property] === 'function') {
-                    console.warn(`Cannot set computed property "${property}"`);
+                    console.error(`Cannot set computed property "${property}"`);
                     return false;
                 }
-                target[property] = value; // Set the property value
-                this.updateBindings(); // Update the bindings whenever the state changes
+                target[property] = value;
+                this.updateBindings(); // Update bindings whenever the state changes
                 return true;
             }
         });
@@ -40,9 +43,13 @@ class CustomElement extends HTMLElement {
      * Loads the template, renders the component, and calls componentDidMount if defined.
      */
     async connectedCallback() {
-        this.template = await this.loadTemplate(); // Load the template asynchronously
-        await this.render(); // Render the component
-        this.componentDidMount && this.componentDidMount(); // Call componentDidMount if defined
+        try {
+            this.template = await this.loadTemplate(); // Load the template asynchronously
+            await this.render(); // Render the component
+            this.componentDidMount && this.componentDidMount(); // Call componentDidMount if defined
+        } catch (error) {
+            console.error('Error during component initialization', error);
+        }
     }
 
     /**
@@ -50,7 +57,11 @@ class CustomElement extends HTMLElement {
      * Calls componentWillUnmount if defined.
      */
     disconnectedCallback() {
-        this.componentWillUnmount && this.componentWillUnmount(); // Call componentWillUnmount if defined
+        try {
+            this.componentWillUnmount && this.componentWillUnmount(); // Call componentWillUnmount if defined
+        } catch (error) {
+            console.error('Error during component unmounting', error);
+        }
     }
 
     /**
@@ -77,14 +88,20 @@ class CustomElement extends HTMLElement {
      * @returns {Promise<HTMLElement>} - The loaded template.
      */
     async loadTemplate() {
-        const templateUrl = this.constructor.templateUrl;
-        if (!templateUrl) return null; // Return null if no template URL is set
+        try {
+            const templateUrl = this.constructor.templateUrl;
+            if (!templateUrl) return null; // Return null if no template URL is set
 
-        const response = await fetch(templateUrl); // Fetch the template
-        const text = await response.text(); // Get the template text
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(text, 'text/html'); // Parse the template text as HTML
-        return doc.querySelector('template'); // Return the <template> element
+            const response = await fetch(templateUrl); // Fetch the template
+            if (!response.ok) throw new Error(`Failed to load template: ${response.statusText}`);
+            const text = await response.text(); // Get the template text
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(text, 'text/html'); // Parse the template text as HTML
+            return doc.querySelector('template'); // Return the <template> element
+        } catch (error) {
+            console.error('Error loading template', error);
+            throw error;
+        }
     }
 
     /**
@@ -96,7 +113,11 @@ class CustomElement extends HTMLElement {
             const matches = eventBinding.match(/(\w+):"?{{(\w+)}}"?/); // Extract the event name and method name
             if (matches) {
                 const [, eventName, methodName] = matches;
-                element.addEventListener(eventName, this[methodName].bind(this)); // Bind the event listener
+                if (typeof this[methodName] === 'function') {
+                    element.addEventListener(eventName, this[methodName].bind(this)); // Bind the event listener
+                } else {
+                    console.warn(`Method "${methodName}" not defined`);
+                }
             }
         });
     }

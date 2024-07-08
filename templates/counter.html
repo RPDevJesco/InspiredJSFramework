@@ -27,16 +27,12 @@
         .count {
             font-size: 24px;
             font-weight: bold;
+            color: var(--text-color);
         }
     </style>
-    <h2>Enhanced Counter</h2>
+    <h2>Counter</h2>
     <p>Current count: <span class="count" bind="{{count}}"></span></p>
-    <p>Double count: <span class="count">{{doubleCount}}</span></p>
     <button on="click:{{decrement}}">-</button>
     <button on="click:{{increment}}">+</button>
-    <select name="theme" bind="{{theme}}">
-        <option value="light">Light Theme</option>
-        <option value="dark">Dark Theme</option>
-    </select>
     <slot name="description"></slot>
 </template>
